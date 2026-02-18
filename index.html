@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Master Kanji Quiz - Pro System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        .option-btn { transition: all 0.2s; border-width: 2px; }
+        .option-correct { background-color: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; }
+        .option-wrong { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
+        .num-dot { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 10px; font-weight: 800; transition: all 0.2s; cursor: pointer; flex-shrink: 0; }
+        .dot-unfilled { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
+        .dot-correct { background-color: #22c55e; color: white; border-color: #22c55e; }
+        .dot-wrong { background-color: #ef4444; color: white; border-color: #ef4444; }
+        .dot-active { border: 2px solid #6366f1; transform: scale(1.1); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+        .custom-scroll::-webkit-scrollbar { height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen pb-32">
+
+    <header class="w-full max-w-md sticky top-0 bg-white/90 backdrop-blur-lg z-50 border-b border-slate-100 px-6 py-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">JLPT Mastery</h1>
+            <div class="relative">
+                <button onclick="toggleDropdown(event)" class="flex items-center gap-2 text-xl font-extrabold text-slate-900">
+                    <span id="currentPartTitle">Bagian 1</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div id="partDropdown" class="absolute top-full left-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden z-[60] overflow-hidden">
+                    <div class="p-2 max-h-80 overflow-y-auto" id="dropdownList"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 bg-red-50 px-3 py-1.5 rounded-xl border border-red-100">
+                <span class="text-xs">❤️</span>
+                <span id="livesText" class="text-sm font-black text-red-600">10</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-md px-6 mt-6" onclick="closeDropdown()">
+        <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm mb-6 overflow-x-auto flex gap-2 custom-scroll" id="numberGrid"></div>
+
+        <div class="bg-white rounded-[3rem] shadow-xl shadow-slate-200/40 border border-white p-14 flex flex-col items-center mb-8">
+            <div id="kanjiQuestion" class="text-7xl font-extrabold text-slate-900">?</div>
+            <div id="statusBadge" class="mt-8 px-5 py-1.5 rounded-full bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest">Belum Diisi</div>
+        </div>
+
+        <div id="optionsContainer" class="space-y-3"></div>
+
+        <div id="explanationArea" class="hidden mt-8 p-8 bg-slate-900 rounded-[2.5rem] text-white mb-10">
+            <p id="explanationText" class="text-sm text-slate-300 leading-relaxed font-medium"></p>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 w-full max-w-md bg-white/90 backdrop-blur-xl border-t border-slate-100 px-6 py-5 flex justify-between items-center gap-4 z-40">
+        <button onclick="prevQuestion()" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">Kembali</button>
+        <button onclick="nextQuestion()" class="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-200">Lanjut</button>
+    </nav>
+
+    <script>
+        const allData = {
+            1: [
+  {k:"名前", r:"なまえ (namae)", m:"Nama", e:"Kanji 名 (nama/me) + 前 (mae). Berarti sebutan atau nama seseorang/sesuatu."},
+  {k:"指名", r:"しめい (shimei)", m:"Penunjukan/Nominasi", e:"Kanji 指 (menunjuk) + 名 (nama). Berarti menunjuk nama atau menominasikan seseorang."},
+  {k:"前", r:"まえ (mae)", m:"Depan / Sebelum", e:"Menunjukkan posisi di depan atau waktu sebelumnya."},
+  {k:"午前", r:"ごぜん (gozen)", m:"Pagi / AM", e:"Kanji 午 (tengah hari) + 前 (sebelum). Menunjukkan waktu sebelum tengah hari."},
+  {k:"国", r:"くに (kuni)", m:"Negara", e:"Kanji tunggal yang berarti negara atau negeri asal."},
+  {k:"国際交流", r:"こくさいこうりゅう (kokusai kouryuu)", m:"Pertukaran Internasional", e:"Kombinasi kanji negara, antar, tukar, dan mengalir. Berarti interaksi antar bangsa."},
+  {k:"外国", r:"がいこく (gaikoku)", m:"Luar Negeri", e:"Kanji 外 (luar) + 国 (negara). Secara harfiah berarti negara luar."},
+  {k:"私", r:"わたし (watashi)", m:"Saya", e:"Kata ganti orang pertama yang umum digunakan dalam situasi formal maupun sehari-hari."},
+  {k:"父", r:"ちち (chichi)", m:"Ayah (Sendiri)", e:"Digunakan untuk menyebut ayah sendiri saat berbicara dengan orang lain."},
+  {k:"お父さん", r:"おとうさん (otousan)", m:"Ayah (Orang lain / Panggilan)", e:"Panggilan hormat untuk ayah orang lain atau memanggil ayah sendiri secara langsung."},
+  {k:"母", r:"はは (haha)", m:"Ibu (Sendiri)", e:"Digunakan untuk menyebut ibu sendiri saat berbicara dengan orang lain."},
+  {k:"お母さん", r:"おかあさん (okaasan)", m:"Ibu (Orang lain / Panggilan)", e:"Panggilan hormat untuk ibu orang lain atau memanggil ibu sendiri secara langsung."},
+  {k:"子供", r:"こども (kodomo)", m:"Anak / Anak-anak", e:"Kanji 子 (anak) + 供 (pendamping/jamak). Berarti anak kecil."},
+  {k:"男の子", r:"おとこのこ (otoko no ko)", m:"Anak Laki-laki", e:"Kanji 男 (pria) + partikel 'no' + 子 (anak)."},
+  {k:"女の子", r:"おんなのこ (onna no ko)", m:"Anak Perempuan", e:"Kanji 女 (wanita) + partikel 'no' + 子 (anak)."},
+  {k:"日本", r:"にほん / にっぽん (nihon/nippon)", m:"Jepang", e:"Kanji 日 (matahari) + 本 (asal). Secara harfiah berarti asal matahari (Negeri Matahari Terbit)."},
+  {k:"～曜日", r:"～ようび (youbi)", m:"Hari... (Senin-Minggu)", e:"Akhiran yang digunakan untuk menyebutkan nama-nama hari dalam seminggu."},
+  {k:"～日", r:"～にち / ～か (nichi/ka)", m:"Tanggal... / Hari...", e:"Akhiran untuk menyatakan tanggal atau jumlah hari."},
+  {k:"今日", r:"きょう (kyou)", m:"Hari Ini", e:"Kombinasi kanji 今 (sekarang) + 日 (hari). Merupakan bacaan khusus (ateji)."},
+  {k:"日本語", r:"にほんご (nihongo)", m:"Bahasa Jepang", e:"Kanji 日本 (Jepang) + 語 (bahasa)."},
+  {k:"昨日", r:"きのう (kinou)", m:"Kemarin", e:"Menunjukkan waktu satu hari sebelum hari ini."},
+  {k:"明日", r:"あした (ashita)", m:"Besok", e:"Menunjukkan waktu satu hari setelah hari ini."},
+  {k:"毎日", r:"まいにち (mainichi)", m:"Setiap Hari", e:"Kanji 毎 (setiap) + 日 (hari)."},
+  {k:"誕生日", r:"たんじょうび (tanjoubi)", m:"Hari Ulang Tahun", e:"Kanji 誕生 (kelahiran) + 日 (hari)."},
+  {k:"本", r:"ほん (hon)", m:"Buku", e:"Kanji yang berarti buku, juga digunakan sebagai kata bantu bilangan benda silinder."},
+  {k:"水曜日", r:"すいようび (suiyoubi)", m:"Hari Rabu", e:"Kanji 水 (air) + 曜日 (hari). Hari air."},
+  {k:"水道", r:"すいどう (suidou)", m:"Saluran Air / Keran", e:"Kanji 水 (air) + 道 (jalan). Berarti sistem penyediaan air bersih."},
+  {k:"食べます", r:"たべます (tabemasu)", m:"Makan", e:"Bentuk sopan (masu) dari kata kerja makan (taberu)."},
+  {k:"食堂", r:"しょくどう (shokudou)", m:"Kantin / Ruang Makan", e:"Kanji 食 (makan) + 堂 (aula/aula besar)."},
+  {k:"食事", r:"しょくじ (shokuji)", m:"Makan / Hidangan", e:"Kanji 食 (makan) + 事 (hal/urusan). Merujuk pada kegiatan makan atau set makanan."},
+  {k:"飲みます", r:"のみます (nomimasu)", m:"Minum", e:"Bentuk sopan (masu) dari kata kerja minum (nomu)."},
+  {k:"飲み物", r:"のみもの (nomimono)", m:"Minuman", e:"Kanji 飲み (minum) + 物 (benda). Secara harfiah benda untuk diminum."},
+  {k:"魚", r:"さかな (sakana)", m:"Ikan", e:"Kanji yang melambangkan hewan air atau ikan."},
+  {k:"肉", r:"にく (niku)", m:"Daging", e:"Kanji umum untuk segala jenis daging hewan."},
+  {k:"牛肉", r:"ぎゅうにく (gyuuniku)", m:"Daging Sapi", e:"Kanji 牛 (sapi) + 肉 (daging)."}
+],
+            2: [
+  {k:"豚肉", r:"ぶたにく (butaniku)", m:"Daging Babi", e:"Kanji 豚 (babi) + 肉 (daging)."},
+  {k:"好き(な)", r:"すき (suki)", m:"Suka", e:"Kata sifat-na yang berarti menyukai sesuatu atau seseorang."},
+  {k:"家", r:"いえ / うち (ie / uchi)", m:"Rumah", e:"Kanji yang melambangkan bangunan tempat tinggal atau rumah tangga."},
+  {k:"家族", r:"かぞく (kazoku)", m:"Keluarga", e:"Kanji 家 (rumah) + 族 (suku/kelompok). Berarti anggota keluarga."},
+  {k:"新しい", r:"あたらしい (atarashii)", m:"Baru", e:"Kata sifat-i yang berarti baru atau segar."},
+  {k:"広い", r:"ひろい (hiroi)", m:"Luas", e:"Kata sifat-i untuk mendeskripsikan ruang yang luas atau lebar."},
+  {k:"広場", r:"ひろば (hiroba)", m:"Alun-alun / Lapangan", e:"Kanji 広 (luas) + 場 (tempat). Tempat terbuka yang luas."},
+  {k:"古い", r:"ふるい (furui)", m:"Tua / Lama", e:"Kata sifat-i untuk benda yang sudah lama atau tua (bukan untuk umur orang)."},
+  {k:"上", r:"うえ (ue)", m:"Atas", e:"Menunjukkan posisi di atas atau bagian atas."},
+  {k:"上手（な）", r:"じょうず (jouzu)", m:"Mahir / Pandai", e:"Kanji 上 (atas) + 手 (tangan). Secara harfiah berarti 'tangan atas' atau ahli."},
+  {k:"～以上", r:"～いじょう (ijou)", m:"Lebih dari / Di atas...", e:"Digunakan untuk menyatakan jumlah atau level yang sama atau lebih dari titik tertentu."},
+  {k:"下", r:"した (shita)", m:"Bawah", e:"Menunjukkan posisi di bawah atau bagian bawah."},
+  {k:"中", r:"なか (naka)", m:"Dalam / Tengah", e:"Menunjukkan posisi di dalam atau di tengah-tengah."},
+  {k:"中止", r:"ちゅうし (chuushi)", m:"Pembatalan / Penghentian", e:"Kanji 中 (tengah) + 止 (berhenti). Berarti berhenti di tengah jalan atau batal."},
+  {k:"月曜日", r:"げつようび (getsuyoubi)", m:"Hari Senin", e:"Kanji 月 (bulan) + 曜日 (hari). Hari bulan."},
+  {k:"～月", r:"～がつ (gatsu)", m:"Bulan... (Januari-Desember)", e:"Akhiran untuk menyebutkan nama bulan dalam setahun."},
+  {k:"今月", r:"こんげつ (kongetsu)", m:"Bulan Ini", e:"Kanji 今 (sekarang) + 月 (bulan)."},
+  {k:"正月", r:"しょうがつ (shougatsu)", m:"Tahun Baru", e:"Kanji 正 (tepat/benar) + 月 (bulan). Merujuk pada perayaan tahun baru di Jepang."},
+  {k:"火曜日", r:"かようび (kayoubi)", m:"Hari Selasa", e:"Kanji 火 (api) + 曜日 (hari). Hari api."},
+  {k:"木曜日", r:"もくようび (mokuyoubi)", m:"Hari Kamis", e:"Kanji 木 (pohon) + 曜日 (hari). Hari pohon."},
+  {k:"金曜日", r:"きんようび (kinyoubi)", m:"Hari Jumat", e:"Kanji 金 (logam/emas) + 曜日 (hari). Hari logam."},
+  {k:"お金", r:"おかね (okane)", m:"Uang", e:"Kanji 金 dengan awalan hormat 'o'. Berarti uang atau kekayaan."},
+  {k:"料金", r:"りょうきん (ryoukin)", m:"Biaya / Tarif", e:"Kanji 料 (bahan/biaya) + 金 (uang)."},
+  {k:"土曜日", r:"どようび (doyoubi)", m:"Hari Sabtu", e:"Kanji 土 (tanah) + 曜日 (hari). Hari tanah."},
+  {k:"朝", r:"あさ (asa)", m:"Pagi", e:"Menunjukkan waktu pagi hari."},
+  {k:"昼", r:"ひる (hiru)", m:"Siang", e:"Menunjukkan waktu siang hari."},
+  {k:"夜", r:"よる (yoru)", m:"Malam", e:"Menunjukkan waktu malam hari."},
+  {k:"～時", r:"～じ (ji)", m:"Jam...", e:"Akhiran untuk menyatakan waktu atau pukul."},
+  {k:"時間", r:"じかん (jikan)", m:"Waktu / Jam (durasi)", e:"Kanji 時 (waktu) + 間 (antara/durasi)."},
+  {k:"時計", r:"とけい (tokei)", m:"Jam (Benda) / Arloji", e:"Kanji 時 (waktu) + 計 (ukur). Alat pengukur waktu."},
+  {k:"～分", r:"～ふん / ～ぷん (fun / pun)", m:"Menit...", e:"Akhiran untuk menyatakan satuan menit."},
+  {k:"自分", r:"じぶん (jibun)", m:"Diri Sendiri", e:"Kanji 自 (diri) + 分 (bagian)."},
+  {k:"分ける", r:"わける (wakeru)", m:"Membagi", e:"Kata kerja untuk memisahkan atau membagi sesuatu menjadi beberapa bagian."},
+  {k:"～半", r:"～はん (han)", m:"Setengah / Setengah jam", e:"Digunakan untuk menyatakan lewat tiga puluh menit (misal: jam 1.30)."},
+  {k:"～枚", r:"～まい (mai)", m:"Lembar... (kata bantu bilangan)", e:"Kata bantu bilangan untuk benda-benda yang tipis dan datar seperti kertas atau baju."}
+],
+            3: [
+                {k:"世界", r:"せかい", m:"Dunia", e:"Seluruh planet bumi."},
+                {k:"重い", r:"おもい", m:"Berat", e:"Benda dengan massa besar."},
+                {k:"変わる", r:"かわる", m:"Berubah", e:"Menjadi berbeda dari sebelumnya."},
+                {k:"申し込む", r:"もうしこむ", m:"Mendaftar", e:"Registrasi kegiatan."},
+                {k:"消す", r:"けす", m:"Mematikan", e:"Menghapus atau mematikan lampu."},
+                {k:"始まる", r:"はじまる", m:"Dimulai", e:"Awal suatu kegiatan."},
+                {k:"消費税", r:"しょうひぜい", m:"Pajak", e:"Pajak belanja (PPN)."},
+                {k:"返す", r:"かえす", m:"Mengembalikan", e:"Memberikan kembali pinjaman."},
+                {k:"～式", r:"～しき", "m":"Upacara", e:"Gaya atau acara seremonial."},
+                {k:"値段", r:"ねだん", m:"Harga", e:"Nilai uang suatu barang."},
+                {k:"祭り", r:"まつり", m:"Festival", e:"Perayaan meriah."},
+                {k:"商品", r:"しょうひん", m:"Produk", e:"Barang dagangan."},
+                {k:"借りる", r:"かりる", m:"Meminjam", e:"Mendapat barang sementara."},
+                {k:"特に", r:"とくに", m:"Khususnya", e:"Terutama sekali."},
+                {k:"案内する", r:"あんない", m:"Memandu", e:"Menunjukkan jalan/info."},
+                {k:"米", r:"こめ", m:"Beras", e:"Biji padi sebelum dimasak."},
+                {k:"卒業する", r:"そつぎょう", m:"Lulus", e:"Menyelesaikan pendidikan."},
+                {k:"閉まる", r:"しまる", m:"Tertutup", e:"Lawan kata dari 'Aku'."},
+                {k:"袋", r:"ふくろ", m:"Tas/Kantong", e:"Wadah untuk membawa barang."},
+                {k:"授業", r:"じゅぎょう", m:"Pelajaran", e:"Kegiatan belajar di kelas."},
+                {k:"服", r:"ふく", m:"Pakaian", e:"Sesuatu yang dipakai ditubuh."},
+                {k:"営業する", r:"えいぎょう", m:"Berbisnis", e:"Toko yang sedang buka."},
+                {k:"情報", r:"じょうほう", m:"Informasi", e:"Data atau berita."},
+                {k:"暗い", r:"くらい", m:"Gelap", e:"Kurang cahaya."},
+                {k:"白", r:"しろ", m:"Putih", e:"Warna putih."},
+                {k:"慣れる", r:"なれる", m:"Terbiasa", e:"Sudah sering melakukan."},
+                {k:"黒", r:"くろ", m:"Hitam", e:"Warna hitam."},
+                {k:"質問", r:"しつもん", m:"Pertanyaan", e:"Hal yang ditanyakan."},
+                {k:"色", r:"いろ", m:"Warna", e:"Kategori warna."},
+                {k:"青", r:"あお", m:"Biru", e:"Warna biru."},
+                {k:"怒る", r:"おこる", m:"Marah", e:"Emosi tidak senang."},
+                {k:"赤", r:"あか", m:"Merah", e:"Warna merah."},
+                {k:"紙", r:"かみ", m:"Kertas", e:"Media untuk menulis."},
+                {k:"軽い", r:"かるい", m:"Ringan", e:"Massa yang kecil."},
+                {k:"必要（な）", r:"ひつよう", m:"Perlu", e:"Sesuatu yang dibutuhkan."}
+            ],
+            4: [
+                {k:"市", r:"し", m:"Kota", e:"Wilayah perkotaan."},
+                {k:"外", r:"そと", m:"Luar", e:"Lawan kata dari dalam."},
+                {k:"危険", r:"きけん", m:"Bahaya", e:"Situasi yang mengancam."},
+                {k:"～種類", r:"～しゅるい", m:"Jenis", e:"Kategori atau macam."},
+                {k:"燃える", r:"もえる", m:"Terbakar", e:"Sampah yang bisa dibakar."},
+                {k:"増える", r:"ふえる", m:"Bertambah", e:"Kuantitas meningkat."},
+                {k:"困る", r:"こまる", m:"Kesulitan", e:"Bingung/mendapat masalah."},
+                {k:"進む", r:"すすむ", m:"Maju", e:"Bergerak ke depan."},
+                {k:"集まる", r:"あつまる", m:"Berkumpul", e:"Orang-orang menyatu."},
+                {k:"声", r:"こえ", m:"Suara", e:"Suara mahluk hidup."},
+                {k:"希望", r:"きぼう", m:"Harapan", e:"Sesuatu yang dicita-citakan."},
+                {k:"続ける", r:"つづける", m:"Melanjutkan", e:"Tidak berhenti."},
+                {k:"考える", r:"かんがえる", m:"Berpikir", e:"Menggunakan otak."},
+                {k:"建てる", r:"たてる", m:"Membangun", e:"Mendirikan gedung."},
+                {k:"笑う", r:"わらう", m:"Tertawa", e:"Ekspresi senang."},
+                {k:"決める", r:"きめる", m:"Memutuskan", e:"Membuat pilihan."},
+                {k:"心配（な）", r:"しんぱい", m:"Khawatir", e:"Pikiran tidak tenang."},
+                {k:"募集", r:"ぼしゅう", m:"Rekrutmen", e:"Membuka lowongan."},
+                {k:"問題", r:"もんだい", m:"Masalah", e:"Soal atau problem."},
+                {k:"違う", r:"ちがう", m:"Berbeda", e:"Salah atau berbeda."},
+                {k:"捨てる", r:"すてる", m:"Membuang", e:"Membuang sampah."},
+                {k:"危ない", r:"あぶない", m:"Bahaya", e:"Sifat yang berbahaya."},
+                {k:"洗う", r:"あらう", m:"Mencuci", e:"Membersihkan dengan air."},
+                {k:"相談", r:"そうだん", m:"Konsultasi", e:"Berdiskusi masalah."},
+                {k:"門", r:"もん", m:"Gerbang", e:"Pintu besar depan."},
+                {k:"雲", r:"くも", m:"Awan", e:"Gumpalan air di langit."},
+                {k:"空気", r:"くうき", m:"Udara", e:"Sesuatu yang dihirup."},
+                {k:"京都", r:"きょうと", m:"Kyoto", e:"Nama kota di Jepang."},
+                {k:"地図", r:"ちず", m:"Peta", e:"Petunjuk wilayah."},
+                {k:"面接", r:"めんせつ", m:"Wawancara", e:"Tes bicara kerja."},
+                {k:"汚い", r:"きたない", m:"Kotor", e:"Tidak bersih."},
+                {k:"猫", r:"ねこ", m:"Kucing", e:"Hewan peliharaan."},
+                {k:"鳥", r:"とり", m:"Burung", e:"Hewan bersayap."},
+                {k:"馬", r:"うま", m:"Kuda", e:"Hewan tunggangan."},
+                {k:"面談", r:"めんだん", m:"Diskusi", e:"Pertemuan tatap muka."}
+            ],
+            5: [
+                {k:"月", r:"げつ", m:"Senin", e:"Hari pertama kerja."},
+                {k:"火", r:"か", m:"Selasa", e:"Hari api."},
+                {k:"水", r:"すい", m:"Rabu", e:"Hari air."},
+                {k:"木", r:"もく", m:"Kamis", e:"Hari pohon."},
+                {k:"土", r:"ど", m:"Sabtu", e:"Hari tanah."},
+                {k:"皆", r:"みんな", m:"Semua", e:"Seluruh orang."},
+                {k:"村", r:"むら", m:"Desa", e:"Wilayah kecil."},
+                {k:"傘", r:"かさ", m:"Payung", e:"Alat saat hujan."},
+                {k:"日記", r:"にっき", m:"Buku Harian", e:"Catatan harian."},
+                {k:"靴", r:"くつ", m:"Sepatu", e:"Alas kaki."},
+                {k:"彼", r:"かれ", m:"Dia (Laki)", e:"Kata ganti pria."},
+                {k:"彼女", r:"かのじょ", m:"Dia (Wanita)", e:"Pacar/wanita."},
+                {k:"親", r:"おや", m:"Orang Tua", e:"Ayah atau Ibu."},
+                {k:"招待", r:"しょうたい", m:"Undangan", e:"Mengajak ke acara."},
+                {k:"丁寧", r:"ていねい", m:"Sopan", e:"Sikap yang baik."},
+                {k:"最後", r:"さいご", m:"Terakhir", e:"Paling ujung."},
+                {k:"最高", r:"さいこう", m:"Terbaik", e:"Sangat luar biasa."},
+                {k:"最低", r:"さいてい", m:"Terburuk", e:"Paling rendah."},
+                {k:"最悪", r:"さいあく", m:"Paling Buruk", e:"Situasi parah."},
+                {k:"池", r:"いけ", m:"Kolam", e:"Genangan air kecil."},
+                {k:"旅", r:"たび", m:"Perjalanan", e:"Traveling."},
+                {k:"林", r:"はやし", m:"Hutan Kecil", e:"Kumpulan pohon."},
+                {k:"力", r:"ちから", m:"Kekuatan", e:"Power/tenaga."},
+                {k:"祖母", r:"そぼ", m:"Nenek", e:"Ibu dari orang tua."},
+                {k:"祖父", r:"そふ", m:"Kakek", e:"Ayah dari orang tua."},
+                {k:"泊まる", r:"とまる", m:"Menginap", e:"Tidur di hotel/rumah."},
+                {k:"自己紹介", r:"じこしょうかい", m:"Perkenalan", e:"Mengenalkan diri."},
+                {k:"熱い", r:"あつい", m:"Panas", e:"Suhu benda."},
+                {k:"厚い", r:"あつい", m:"Tebal", e:"Dimensi benda."},
+                {k:"喜ぶ", r:"よろこぶ", m:"Senang", e:"Merasa gembira."},
+                {k:"成長", r:"せいちょう", m:"Pertumbuhan", e:"Menjadi besar."},
+                {k:"若い", r:"わかい", m:"Muda", e:"Usia belum tua."},
+                {k:"帰国", r:"きこく", m:"Pulang Negara", e:"Kembali ke asal."},
+                {k:"薬局", r:"やっきょく", m:"Apotek", e:"Toko obat."},
+                {k:"人形", r:"にんぎょう", m:"Boneka", e:"Mainan orang-orang."}
+            ]
+        };
+
+        // Fill remaining parts (6-14) with placeholders
+        for(let n=6; n<=14; n++) {
+            allData[n] = Array.from({length: 35}, (_, i) => ({
+                k: `P${n}`, r: `?`, m: `Bagian ${n} Soal ${i+1}`, e: `Belum ada data.`
+            }));
+        }
+
+        let currentPart = 1, quizData = [], currentIndex = 0, lives = 10, score = 0, userAnswers = new Array(35).fill(null), currentOptions = [];
+
+        function initDropdown() {
+            const list = document.getElementById('dropdownList');
+            list.innerHTML = '';
+            for(let i=1; i<=14; i++) {
+                const btn = document.createElement('button');
+                const isActive = (i === currentPart);
+                btn.className = `w-full text-left px-5 py-4 text-xs font-bold border-b border-slate-50 transition-colors ${isActive ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'}`;
+                btn.innerHTML = `<div class="flex justify-between"><span>Bagian ${i}</span>${isActive ? '<span>●</span>' : ''}</div>`;
+                btn.onclick = () => {
+                    currentPart = i;
+                    document.getElementById('currentPartTitle').innerText = "Bagian " + i;
+                    initDropdown(); 
+                    closeDropdown();
+                    restartGame();
+                };
+                list.appendChild(btn);
+            }
+        }
+
+        function toggleDropdown(e) { e.stopPropagation(); document.getElementById('partDropdown').classList.toggle('hidden'); }
+        function closeDropdown() { document.getElementById('partDropdown').classList.add('hidden'); }
+
+        function renderNumberGrid() {
+            const grid = document.getElementById('numberGrid');
+            grid.innerHTML = '';
+            for(let i=0; i<35; i++) {
+                const dot = document.createElement('div');
+                let sc = userAnswers[i] === 'correct' ? 'dot-correct' : (userAnswers[i] === 'wrong' ? 'dot-wrong' : 'dot-unfilled');
+                dot.className = `num-dot ${sc} ${i === currentIndex ? 'dot-active' : ''}`;
+                dot.innerText = i + 1;
+                dot.onclick = () => { currentIndex = i; loadQuestion(true); };
+                grid.appendChild(dot);
+            }
+        }
+
+        function restartGame() {
+            quizData = [...allData[currentPart]];
+            currentIndex = 0; lives = 10; score = 0;
+            userAnswers = new Array(35).fill(null);
+            document.getElementById('livesText').innerText = lives;
+            loadQuestion(true);
+        }
+
+        function loadQuestion(isNew) {
+            renderNumberGrid();
+            const item = quizData[currentIndex];
+            if(isNew) {
+                let opts = [{ r: item.r, m: item.m, correct: true }];
+                let others = quizData.filter(i => i.r !== item.r).sort(() => Math.random() - 0.5);
+                for(let i=0; i<3; i++) { if(others[i]) opts.push({ r: others[i].r, m: others[i].m, correct: false }); }
+                currentOptions = opts.sort(() => Math.random() - 0.5);
+                document.getElementById('kanjiQuestion').innerText = item.k;
+            }
+            
+            const badge = document.getElementById('statusBadge');
+            const exp = document.getElementById('explanationArea');
+            if(userAnswers[currentIndex] === null) {
+                badge.innerText = "Belum Diisi"; badge.className = "mt-8 px-5 py-1.5 rounded-full bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest";
+                exp.classList.add('hidden');
+            } else {
+                const isC = userAnswers[currentIndex] === 'correct';
+                badge.innerText = isC ? "Benar" : "Salah";
+                badge.className = `mt-8 px-5 py-1.5 rounded-full ${isC ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-[9px] font-black uppercase tracking-widest`;
+                document.getElementById('explanationText').innerText = item.e;
+                exp.classList.remove('hidden');
+            }
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            currentOptions.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full p-5 bg-white border-slate-100 rounded-2xl flex justify-between items-center text-left shadow-sm";
+                if(userAnswers[currentIndex] !== null) {
+                    if(opt.correct) btn.classList.add('option-correct');
+                    if(userAnswers[currentIndex] === 'wrong' && opt.clicked) btn.classList.add('option-wrong');
+                }
+                btn.innerHTML = `<div><div class="text-sm font-black text-slate-800">${opt.r}</div><div class="text-[9px] font-bold text-slate-400 uppercase">${opt.m}</div></div>`;
+                btn.onclick = () => {
+                    if(userAnswers[currentIndex] !== null) return;
+                    opt.clicked = true;
+                    if(opt.correct) { userAnswers[currentIndex] = 'correct'; score += 10; }
+                    else { userAnswers[currentIndex] = 'wrong'; lives--; document.getElementById('livesText').innerText = lives; }
+                    loadQuestion(false);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function nextQuestion() { if(currentIndex < 34) { currentIndex++; loadQuestion(true); } }
+        function prevQuestion() { if(currentIndex > 0) { currentIndex--; loadQuestion(true); } }
+
+        window.onload = () => { 
+            initDropdown(); 
+            restartGame();
+        };
+    </script>
+</body>
+</html>
