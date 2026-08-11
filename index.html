@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FlashCard Kanji N5-N4</title>
+    <title>FlashCard Kanji JFT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap');
@@ -534,7 +534,7 @@
         function initDropdown() {
             const list = document.getElementById('dropdownList');
             list.innerHTML = '';
-            for(let i=1; i<=40; i++) {
+            for(let i=1; i<=11; i++) {
                 const btn = document.createElement('button');
                 btn.className = `w-full flex items-center justify-between px-4 py-3.5 text-xs font-bold rounded-2xl transition-all mb-1 last:mb-0 ${i === currentPart ? 'active-part' : 'text-slate-500 hover:bg-slate-50'}`;
                 btn.innerHTML = `
